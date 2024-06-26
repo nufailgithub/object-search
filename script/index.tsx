@@ -10,8 +10,11 @@ const objective = new ObjectiveClient({
 // Store products in Objective SDK
 const storeProducts = async () => {
   try {
-    for (let i = 0; i < products.length; i++) {
-      await objective.objectStore.objects.upsert(`product_${i}`, products[i]);
+    for (let i = 0; i < productsArray.length; i++) {
+      await objective.objectStore.objects.upsert(
+        `product_${i}`,
+        productsArray[i]
+      );
     }
   } catch (error) {
     console.log("error: ", error);
@@ -45,35 +48,36 @@ const createIndex = async () => {
 const SearchComponent = () => {
   const [query, setQuery] = useState("");
   const [products, setProducts] = useState([]);
+  const [indexId, setIndexId] = useState("");
 
-  // Fetch products from the proxy server
-  const fetchProducts = async (query: any) => {
-    try {
-      const response = await fetch(
-        `http://localhost:3000/api/objective/index/search`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ query }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Network response was not ok");
-      }
-
-      const data = await response.json();
-      setProducts(data.results); // Assuming 'results' is where your products are returned
-    } catch (error) {
-      console.error("Error fetching products:", error);
+  const fetchProducts = async (indexId: any) => {
+    if (query === "") {
+      setProducts(products);
+      return;
     }
+
+    const results = await objective.indexes.index.search(indexId, {
+      query,
+      object_fields: "*",
+    });
+
+    setProducts(results);
   };
 
   useEffect(() => {
-    fetchProducts(query);
-  }, [query]);
+    const initialize = async () => {
+      await storeProducts();
+      const newIndexId = await createIndex();
+      setIndexId(newIndexId);
+    };
+    initialize();
+  }, []);
+
+  useEffect(() => {
+    if (indexId) {
+      fetchProducts(indexId);
+    }
+  }, [query, indexId]);
 
   return (
     <div>
@@ -99,7 +103,7 @@ const SearchComponent = () => {
 
 export default SearchComponent;
 
-const products = [
+const productsArray = [
   {
     title: "Oversized Tee",
     price: "Rs 2,690.00",
@@ -241,6 +245,6 @@ const products = [
     description:
       "The legacy sweatshirt was created for anyone planning to outwork the rest. It is made with proprietary fabric treatments and a plush hand feel so that Its comfort will not be washed away over time. Featuring our classic back neck embroidery this sweatshirt is an Essential!",
     size: ["XS", "S", "M", "L", "XL", "XXL"],
-    color: ["BLACK", "BRICK BROWN", "CHARCOAL GREY", "NAVY BLUE"],
+    color: ["BLACK", "BRICK BROWN", "CHARCOAL GREY", "NAVY BLUE"],
   },
 ];

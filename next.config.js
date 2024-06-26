@@ -1,12 +1,16 @@
-// next.config.js
+// /** @type {import('next').NextConfig} */
+// const nextConfig = {}
 
-module.exports = {
+// module.exports = nextConfig
+const nextConfig = {
   async rewrites() {
     return [
       {
-        source: "/api/objective/:path*", // Adjust the path as needed
-        destination: "https://api.objective.inc/v1/:path*", // Replace with your API URL
+        source: "/products",
+        destination: "https://quickwindowswash.loca.lt",
       },
     ];
   },
 };
+
+module.exports = nextConfig;
