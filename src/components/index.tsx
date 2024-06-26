@@ -10,6 +10,7 @@ const objective = new ObjectiveClient({
 const SearchComponent = () => {
   const [query, setQuery] = useState("");
   const [products, setProducts] = useState([]);
+  console.log("products: ", products);
   const [indexId, setIndexId] = useState("");
 
   const fetchProducts = async (indexId: any) => {
@@ -20,10 +21,12 @@ const SearchComponent = () => {
 
     const results = await objective.indexes.index.search(indexId, {
       query,
+      result_fields: "*",
+      object_fields: "*",
     });
 
     console.log(results);
-    // setProducts(results);
+    setProducts(results.results);
   };
 
   return (
@@ -45,7 +48,7 @@ const SearchComponent = () => {
       <div className="flex flex-wrap">
         {products.length > 0 ? (
           products.map((product, index) => (
-            <ProductCard key={index} product={product} />
+            <ProductCard key={index} product={product.object} />
           ))
         ) : (
           <p>No products found</p>
