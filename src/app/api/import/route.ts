@@ -1,108 +1,7 @@
-"use client";
-import { ProductCard } from "@/app/component/card";
 import { ObjectiveClient } from "objective-sdk";
-import { useEffect, useState } from "react";
-
 const objective = new ObjectiveClient({
   apiKey: "sk_gZKnPCiefXaR",
 });
-
-// Store products in Objective SDK
-const storeProducts = async () => {
-  try {
-    for (let i = 0; i < productsArray.length; i++) {
-      await objective.objectStore.objects.upsert(
-        `product_${i}`,
-        productsArray[i]
-      );
-    }
-  } catch (error) {
-    console.log("error: ", error);
-  }
-};
-
-//index creation
-const createIndex = async () => {
-  try {
-    const response = await objective.indexes.create({
-      configuration: {
-        index_type: {
-          name: "multimodal",
-        },
-        fields: {
-          searchable: {
-            allow: ["title", "brand"],
-          },
-          crawlable: {
-            allow: ["images"],
-          },
-        },
-      },
-    });
-    return response.id;
-  } catch (error) {
-    console.log("error: ", error);
-  }
-};
-
-const SearchComponent = () => {
-  const [query, setQuery] = useState("");
-  const [products, setProducts] = useState([]);
-  const [indexId, setIndexId] = useState("");
-
-  const fetchProducts = async (indexId: any) => {
-    if (query === "") {
-      setProducts(products);
-      return;
-    }
-
-    const results = await objective.indexes.index.search(indexId, {
-      query,
-      object_fields: "*",
-    });
-
-    setProducts(results);
-  };
-
-  useEffect(() => {
-    const initialize = async () => {
-      await storeProducts();
-      const newIndexId = await createIndex();
-      setIndexId(newIndexId);
-    };
-    initialize();
-  }, []);
-
-  useEffect(() => {
-    if (indexId) {
-      fetchProducts(indexId);
-    }
-  }, [query, indexId]);
-
-  return (
-    <div>
-      <input
-        type="text"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search products..."
-        className="p-2 border rounded"
-      />
-      <div className="flex flex-wrap">
-        {products.length > 0 ? (
-          products.map((product, index) => (
-            <ProductCard key={index} product={product} />
-          ))
-        ) : (
-          <p>No products found</p>
-        )}
-      </div>
-    </div>
-  );
-};
-
-export default SearchComponent;
-
 const productsArray = [
   {
     title: "Oversized Tee",
@@ -248,3 +147,71 @@ const productsArray = [
     color: ["BLACK", "BRICK BROWN", "CHARCOAL GREY", "NAVY BLUE"],
   },
 ];
+
+// Store products in Objective SDK
+const storeProducts = async () => {
+  try {
+    for (let i = 0; i < productsArray.length; i++) {
+      await objective.objectStore.objects.upsert(
+        `product_${i}`,
+        productsArray[i]
+      );
+    }
+  } catch (error) {
+    console.log("error: ", error);
+  }
+};
+
+const checkIndex = async () => {
+  try {
+    const existingIndex = await objective.indexes.getIndexes();
+
+    console.log(existingIndex.indexes);
+    // prevent creating duplicate index
+    if (existingIndex.indexes.length > 0) {
+      return {
+        has: true,
+        indexes: existingIndex.indexes,
+      };
+    }
+  } catch (error) {
+    console.log("error: ", error);
+  }
+};
+
+//index creation
+const createIndex = async () => {
+  try {
+    const response = await objective.indexes.create({
+      configuration: {
+        index_type: {
+          name: "multimodal",
+        },
+        fields: {
+          searchable: {
+            allow: ["title", "description", "price", "size", "color"],
+          },
+          crawlable: {
+            allow: ["images"],
+          },
+        },
+      },
+    });
+    return response.id;
+  } catch (error) {
+    console.log("error: ", error);
+  }
+};
+
+export async function GET() {
+  const hasIndex = await checkIndex();
+
+  if (hasIndex?.has) {
+    return Response.json({ message: "Index already exists", ...hasIndex });
+  }
+
+  const indexId = await createIndex();
+  await storeProducts();
+
+  return Response.json({ indexId });
+}
