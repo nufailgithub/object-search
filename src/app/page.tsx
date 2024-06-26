@@ -1,4 +1,4 @@
-import Products from "../../script";
+import Products from "../components";
 
 export default function Home() {
   return (
